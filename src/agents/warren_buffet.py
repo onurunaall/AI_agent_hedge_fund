@@ -41,6 +41,12 @@ class WarrenBuffettStrategy:
             return 0.0
         return sum(fcf * ((1 + growth_rate / 100) ** i) / ((1 + discount_rate / 100) ** i) for i in range(1, years + 1))
 
+    def calculate_expected_return(self, roe: float, pb_ratio: float) -> float:
+        """Estimates long-term return using Buffett’s formula: ROE / P/B Ratio."""
+        if pb_ratio == 0:
+            return 0.0
+        return roe / pb_ratio
+
     def analyze_stock(self, ticker: str, end_date: str) -> Optional[AgentStateData]:
         """Applies Buffett’s principles to analyze a stock using valuation and safety margin criteria."""
         financials = self.get_financial_data(ticker, end_date)
@@ -50,16 +56,17 @@ class WarrenBuffettStrategy:
 
         intrinsic_value = self.calculate_intrinsic_value(financials["free_cash_flow"], financials["growth_rate"], financials["discount_rate"])
         margin_of_safety = (intrinsic_value - financials["market_cap"]) / financials["market_cap"]
+        expected_return = self.calculate_expected_return(financials["roe"], financials["pb_ratio"])
 
-        if margin_of_safety > 0.15:  # Buffett’s 15% margin of safety rule
+        if margin_of_safety > 0.15 and expected_return > 10:
             signal = "Bullish"
         else:
             signal = "Neutral"
 
         reasoning = (
             f"Intrinsic Value: ${intrinsic_value:.2f}, Market Cap: ${financials['market_cap']:.2f}, "
-            f"Margin of Safety: {margin_of_safety:.2%}, P/E Ratio: {financials['pe_ratio']}, "
-            f"P/B Ratio: {financials['pb_ratio']}, ROE: {financials['roe']}%."
+            f"Margin of Safety: {margin_of_safety:.2%}, Expected Return: {expected_return:.2f}%, "
+            f"P/E Ratio: {financials['pe_ratio']}, P/B Ratio: {financials['pb_ratio']}, ROE: {financials['roe']}%."
         )
 
         # Run LLM for enhanced investment reasoning
