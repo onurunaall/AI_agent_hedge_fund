@@ -3,6 +3,7 @@
 from agents.warren_buffett import WarrenBuffettStrategy
 from agents.bill_ackman import BillAckmanStrategy
 from agents.technicals import TechnicalAnalyzer
+from llm.llm import run_llm_analysis
 from utils.logger import logger
 from typing import Dict, Optional
 
@@ -34,10 +35,13 @@ class AIAnalyst:
         return signals
 
     def aggregate_signals(self, signals: Dict[str, Dict[str, str]]) -> Dict[str, str]:
-        """Aggregates multiple AI signals into a final trading decision."""
+        """Aggregates multiple AI signals into a final trading decision with LLM-generated reasoning."""
         bullish_count = sum(1 for analysis in signals.values() if analysis["investment_signal"] == "Bullish")
         neutral_count = sum(1 for analysis in signals.values() if analysis["investment_signal"] == "Neutral")
         bearish_count = sum(1 for analysis in signals.values() if analysis["investment_signal"] == "Bearish")
+
+        total_signals = len(signals)
+        confidence = round(max(bullish_count, bearish_count) / total_signals, 2) * 100
 
         if bullish_count > bearish_count:
             final_signal = "Bullish"
@@ -46,11 +50,12 @@ class AIAnalyst:
         else:
             final_signal = "Neutral"
 
-        logger.info(f"Final aggregated signal: {final_signal}")
+        reasoning = run_llm_analysis("Investment Decision", f"Aggregated signals: {signals}")
+
+        logger.info(f"Final aggregated signal: {final_signal} with {confidence}% confidence.")
 
         return {
             "final_signal": final_signal,
-            "bullish_count": bullish_count,
-            "neutral_count": neutral_count,
-            "bearish_count": bearish_count
+            "confidence": confidence,
+            "reasoning": reasoning
         }
