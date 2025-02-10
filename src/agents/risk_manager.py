@@ -1,9 +1,8 @@
-# src/agents/risk_manager.py
-
 import numpy as np
 from data.api_client import APIClient
 from data.data_models import AgentStateData
 from utils.logger import logger
+from utils.progress import progress
 from typing import Dict, Optional
 
 
@@ -42,6 +41,18 @@ class RiskManager:
         market_variance = np.var(market_returns)
         return covariance / market_variance if market_variance > 0 else None
 
+    def calculate_var(self, ticker: str, start_date: str, end_date: str, confidence_level: float = 0.95) -> Optional[float]:
+        """Calculates Value at Risk (VaR) using historical returns at a given confidence level."""
+        price_data = self.api_client.get_prices(ticker, start_date, end_date)
+        if not price_data or not price_data.prices:
+            return None
+
+        returns = np.diff([p.close for p in price_data.prices]) / [p.close for p in price_data.prices][:-1]
+        if len(returns) == 0:
+            return None
+
+        return np.percentile(returns, (1 - confidence_level) * 100) * self.initial_capital
+
     def determine_position_size(self, ticker: str, start_date: str, end_date: str) -> Optional[float]:
         """Calculates optimal position size based on volatility and beta-adjusted risk."""
         volatility = self.get_volatility(ticker, start_date, end_date)
@@ -66,7 +77,9 @@ class RiskManager:
     def manage_risk(self, ticker: str, entry_price: float, start_date: str, end_date: str) -> Optional[AgentStateData]:
         """Executes risk management calculations and returns structured output."""
         position_size = self.determine_position_size(ticker, start_date, end_date)
-        if position_size is None:
+        var = self.calculate_var(ticker, start_date, end_date)
+
+        if position_size is None or var is None:
             logger.warning(f"[{ticker}] Unable to determine position size due to missing risk metrics.")
             return None
 
@@ -76,7 +89,8 @@ class RiskManager:
         reasoning = (
             f"Position Size: ${position_size:.2f}, "
             f"Stop Loss at: ${stop_loss_price:.2f}, "
-            f"Take Profit at: ${take_profit_price:.2f}."
+            f"Take Profit at: ${take_profit_price:.2f}, "
+            f"VaR: ${var:.2f}."
         )
 
         logger.info(f"[{ticker}] Risk Management Decision: {reasoning}")
@@ -90,6 +104,7 @@ class RiskManager:
                     "position_size": position_size,
                     "stop_loss_price": stop_loss_price,
                     "take_profit_price": take_profit_price,
+                    "var": var,
                     "reasoning": reasoning
                 }
             }
