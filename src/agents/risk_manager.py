@@ -1,8 +1,9 @@
+# src/agents/risk_manager.py
+
 import numpy as np
 from data.api_client import APIClient
 from data.data_models import AgentStateData
 from utils.logger import logger
-from utils.progress import progress
 from typing import Dict, Optional
 
 
@@ -42,16 +43,14 @@ class RiskManager:
         return covariance / market_variance if market_variance > 0 else None
 
     def calculate_var(self, ticker: str, start_date: str, end_date: str, confidence_level: float = 0.95) -> Optional[float]:
-        """Calculates Value at Risk (VaR) using historical returns at a given confidence level."""
-        price_data = self.api_client.get_prices(ticker, start_date, end_date)
-        if not price_data or not price_data.prices:
+        """Calculates Value at Risk (VaR) at a given confidence level."""
+        volatility = self.get_volatility(ticker, start_date, end_date)
+        if volatility is None:
             return None
 
-        returns = np.diff([p.close for p in price_data.prices]) / [p.close for p in price_data.prices][:-1]
-        if len(returns) == 0:
-            return None
-
-        return np.percentile(returns, (1 - confidence_level) * 100) * self.initial_capital
+        z_score = 1.65 if confidence_level == 0.95 else 2.33  # 95% or 99% confidence
+        daily_var = self.initial_capital * volatility * z_score
+        return daily_var
 
     def determine_position_size(self, ticker: str, start_date: str, end_date: str) -> Optional[float]:
         """Calculates optimal position size based on volatility and beta-adjusted risk."""
@@ -74,23 +73,35 @@ class RiskManager:
         """Determines take-profit price based on percentage gain target."""
         return entry_price * (1 + take_profit_pct / 100)
 
+    def rebalance_portfolio(self, portfolio: Dict[str, float], threshold: float = 0.05) -> Dict[str, float]:
+        """Adjusts positions based on market conditions and risk parameters."""
+        total_value = sum(portfolio.values())
+        target_allocation = {ticker: total_value * 0.1 for ticker in portfolio.keys()}  # Equal weight portfolio
+
+        adjustments = {}
+        for ticker, value in portfolio.items():
+            deviation = (value - target_allocation[ticker]) / target_allocation[ticker]
+            if abs(deviation) > threshold:
+                adjustments[ticker] = target_allocation[ticker] - value
+
+        return adjustments
+
     def manage_risk(self, ticker: str, entry_price: float, start_date: str, end_date: str) -> Optional[AgentStateData]:
         """Executes risk management calculations and returns structured output."""
         position_size = self.determine_position_size(ticker, start_date, end_date)
-        var = self.calculate_var(ticker, start_date, end_date)
-
-        if position_size is None or var is None:
+        if position_size is None:
             logger.warning(f"[{ticker}] Unable to determine position size due to missing risk metrics.")
             return None
 
         stop_loss_price = self.apply_stop_loss(entry_price)
         take_profit_price = self.apply_take_profit(entry_price)
+        var = self.calculate_var(ticker, start_date, end_date)
 
         reasoning = (
             f"Position Size: ${position_size:.2f}, "
             f"Stop Loss at: ${stop_loss_price:.2f}, "
             f"Take Profit at: ${take_profit_price:.2f}, "
-            f"VaR: ${var:.2f}."
+            f"VaR (95%): ${var:.2f}."
         )
 
         logger.info(f"[{ticker}] Risk Management Decision: {reasoning}")
@@ -104,7 +115,7 @@ class RiskManager:
                     "position_size": position_size,
                     "stop_loss_price": stop_loss_price,
                     "take_profit_price": take_profit_price,
-                    "var": var,
+                    "value_at_risk": var,
                     "reasoning": reasoning
                 }
             }
