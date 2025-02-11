@@ -152,12 +152,12 @@ class APIClient:
         return CompanyNewsResponse(news=all_news)
 
     def search_line_items(self, ticker: str, end_date: str) -> LineItemResponse:
-        """Fetch financial line items using a POST request with a JSON body."""
-        data = self._post("/financial-line-items/", {"ticker": ticker, "end_date": end_date})
-
+        data = self._post("/financials/search/line-items", {"ticker": ticker, "end_date": end_date})
+        
         if data:
             return LineItemResponse(search_results=[LineItem(**item) for item in data])
         return LineItemResponse(search_results=[])
+
 
     def get_market_cap(self, ticker: str, end_date: str) -> Optional[float]:
         """Fetch market capitalization separately if needed."""
