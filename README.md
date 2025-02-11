@@ -22,7 +22,7 @@ python src/main.py --tickers "AAPL,MSFT" --start-date "2022-01-01" --end-date "2
 You’ll be prompted to select analysts via the terminal. Follow the on-screen instructions.
 
 ## Project Structure
-### src/backtester.py – Backtesting engine for simulating trades.
+##### src/backtester.py – Backtesting engine for simulating trades.
 #### src/agents/ – Contains all the strategy modules (Ackman, Buffett, Fundamentals, Risk Management, Sentiment, etc.).
 src/data/ – API client, cache, data models, and global state management.
 src/llm/ – LLM integration (simulated response, can be replaced with real API calls).
