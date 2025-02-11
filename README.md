@@ -29,4 +29,4 @@ You’ll be prompted to select analysts via the terminal. Follow the on-screen i
 #### src/utils/ – Utilities for display, progress tracking, and visualization.
 #### src/main.py – Entry point for running the backtest.
 
-This project is designed to mirror the logic and functionality of a previous system. Some parts are simplified, but overall it should function identically.
+This project is designed to mirror the logic and functionality of another system from github.com/virattt/ai-hedge-fund. Some parts are simplified, but overall it should function identically.
