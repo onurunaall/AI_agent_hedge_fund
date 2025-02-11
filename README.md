@@ -23,7 +23,7 @@ You’ll be prompted to select analysts via the terminal. Follow the on-screen i
 
 ## Project Structure
 src/backtester.py – Backtesting engine for simulating trades.
-src/agents/ – Contains all the strategy modules (Ackman, Buffett, Fundamentals, Risk Management, Sentiment, etc.).
+\n src/agents/ – Contains all the strategy modules (Ackman, Buffett, Fundamentals, Risk Management, Sentiment, etc.).
 src/data/ – API client, cache, data models, and global state management.
 src/llm/ – LLM integration (simulated response, can be replaced with real API calls).
 src/utils/ – Utilities for display, progress tracking, and visualization.
